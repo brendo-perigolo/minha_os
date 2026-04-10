@@ -44,20 +44,50 @@ export default function Dashboard() {
       ordens: or.count || 0,
     })
 
-    const { data: ordens } = await supabase
-      .from('ordens_servico')
-      .select('id, status, total, created_at, clientes(nome)')
-      .order('created_at', { ascending: false })
-      .limit(8)
-    setRecentOrdens(ordens || [])
+    {
+      const { data: ordens, error } = await supabase
+        .from('ordens_servico')
+        .select('id, status, total, created_at, clientes(nome)')
+        .order('created_at', { ascending: false })
+        .limit(8)
 
-    const { data: abertas } = await supabase
-      .from('ordens_servico')
-      .select('id, status, created_at, tecnico_atendimento, clientes(nome, endereco)')
-      .eq('status', 'aberto')
-      .order('created_at', { ascending: false })
-      .limit(5)
-    setOpenOrdens(abertas || [])
+      if (error) {
+        console.error('Erro ao carregar ordens recentes:', error)
+        const { data: ordensFallback, error: errorFallback } = await supabase
+          .from('ordens_servico')
+          .select('id, status, total, created_at')
+          .order('created_at', { ascending: false })
+          .limit(8)
+        if (errorFallback) console.error('Erro fallback ordens recentes:', errorFallback)
+        setRecentOrdens(ordensFallback || [])
+      } else {
+        setRecentOrdens(ordens || [])
+      }
+    }
+
+    {
+      const { data: abertas, error } = await supabase
+        .from('ordens_servico')
+        .select('id, status, created_at, tecnico_atendimento, clientes(nome, endereco)')
+        .eq('status', 'aberto')
+        .order('created_at', { ascending: false })
+        .limit(5)
+
+      if (error) {
+        console.error('Erro ao carregar OS em aberto:', error)
+        // Fallback sem join/colunas opcionais (evita 400 caso migração/relacionamento não exista)
+        const { data: abertasFallback, error: errorFallback } = await supabase
+          .from('ordens_servico')
+          .select('id, status, created_at')
+          .eq('status', 'aberto')
+          .order('created_at', { ascending: false })
+          .limit(5)
+        if (errorFallback) console.error('Erro fallback OS em aberto:', errorFallback)
+        setOpenOrdens(abertasFallback || [])
+      } else {
+        setOpenOrdens(abertas || [])
+      }
+    }
     setLoading(false)
   }
 
