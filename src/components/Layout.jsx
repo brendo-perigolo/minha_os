@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useMemo, useRef, useState, useEffect } from 'react'
 import { NavLink, useLocation } from 'react-router-dom'
 import {
   RiDashboardLine,
@@ -10,6 +10,8 @@ import {
   RiCloseLine,
   RiSunLine,
   RiMoonLine,
+  RiNotification3Line,
+  RiNotificationOffLine,
   RiLogoutBoxRLine,
   RiUserSettingsLine,
   RiWallet3Line,
@@ -19,6 +21,8 @@ import {
 import './Layout.css'
 import { useAuth } from '../contexts/AuthContext'
 import { supabase } from '../lib/supabase'
+import toast from 'react-hot-toast'
+import { disablePushNotifications, enablePushNotifications, getPushStatus } from '../lib/pushNotifications'
 
 const navItems = [
   { to: '/', label: 'Dashboard', icon: <RiDashboardLine /> },
@@ -34,13 +38,94 @@ const navItems = [
 export default function Layout({ children }) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [theme, setTheme] = useState(localStorage.getItem('theme') || 'dark')
-  const { userProfile, isAdmin } = useAuth()
+  const { session, userProfile, isAdmin } = useAuth()
   const location = useLocation()
+
+  const [pushInfo, setPushInfo] = useState({ supported: false, permission: 'default', subscribed: false })
+  const [pushLoading, setPushLoading] = useState(false)
+  const promptedRef = useRef(false)
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme)
     localStorage.setItem('theme', theme)
   }, [theme])
+
+  async function refreshPushInfo() {
+    try {
+      const info = await getPushStatus()
+      setPushInfo(info)
+    } catch {
+      setPushInfo({ supported: false, permission: 'default', subscribed: false })
+    }
+  }
+
+  useEffect(() => {
+    refreshPushInfo()
+  }, [])
+
+  useEffect(() => {
+    // Ao abrir o sistema: se não estiver ativo, perguntar se deseja ativar
+    // (somente uma vez por carregamento e somente quando logado)
+    if (promptedRef.current) return
+    if (!session?.user?.id) return
+    if (!pushInfo.supported) return
+    if (pushInfo.permission === 'denied') return
+    if (pushInfo.subscribed) return
+
+    promptedRef.current = true
+    const ok = window.confirm('Deseja ativar as notificações neste aparelho?')
+    if (!ok) return
+
+    ;(async () => {
+      setPushLoading(true)
+      try {
+        await enablePushNotifications({ supabase, userId: session.user.id })
+        toast.success('Notificações ativadas!')
+        await refreshPushInfo()
+      } catch (e) {
+        console.error(e)
+        toast.error(e?.message || 'Não foi possível ativar')
+      }
+      setPushLoading(false)
+    })()
+  }, [session?.user?.id, pushInfo.supported, pushInfo.permission, pushInfo.subscribed])
+
+  const bellIcon = useMemo(() => {
+    if (!pushInfo.supported) return <RiNotificationOffLine />
+    if (pushInfo.permission === 'denied') return <RiNotificationOffLine />
+    return pushInfo.subscribed ? <RiNotification3Line /> : <RiNotificationOffLine />
+  }, [pushInfo.supported, pushInfo.permission, pushInfo.subscribed])
+
+  async function togglePush() {
+    if (!session?.user?.id) {
+      toast.error('Faça login para gerenciar notificações')
+      return
+    }
+    if (!pushInfo.supported) {
+      toast.error('Seu navegador não suporta notificações push')
+      return
+    }
+    if (pushInfo.permission === 'denied') {
+      toast.error('Notificações bloqueadas no navegador')
+      return
+    }
+
+    setPushLoading(true)
+    try {
+      if (pushInfo.subscribed) {
+        await disablePushNotifications({ supabase, userId: session.user.id })
+        toast.success('Notificações desativadas!')
+      } else {
+        await enablePushNotifications({ supabase, userId: session.user.id })
+        toast.success('Notificações ativadas!')
+      }
+      await refreshPushInfo()
+    } catch (e) {
+      console.error(e)
+      toast.error(e?.message || 'Não foi possível atualizar')
+    }
+    setPushLoading(false)
+  }
 
   const pageTitle = navItems.find(n => {
     if (n.to === '/') return location.pathname === '/'
@@ -123,13 +208,23 @@ export default function Layout({ children }) {
             </button>
             <h1 className="header-title">{pageTitle}</h1>
           </div>
-          <button 
-            className="btn btn-secondary btn-icon" 
-            onClick={() => setTheme(t => t === 'dark' ? 'light' : 'dark')}
-            title={theme === 'dark' ? 'Mudar para tema claro' : 'Mudar para tema escuro'}
-          >
-            {theme === 'dark' ? <RiSunLine /> : <RiMoonLine />}
-          </button>
+          <div className="header-right">
+            <button
+              className="btn btn-secondary btn-icon"
+              onClick={togglePush}
+              disabled={pushLoading}
+              title={pushInfo.subscribed ? 'Desativar notificações' : 'Ativar notificações'}
+            >
+              {bellIcon}
+            </button>
+            <button 
+              className="btn btn-secondary btn-icon" 
+              onClick={() => setTheme(t => t === 'dark' ? 'light' : 'dark')}
+              title={theme === 'dark' ? 'Mudar para tema claro' : 'Mudar para tema escuro'}
+            >
+              {theme === 'dark' ? <RiSunLine /> : <RiMoonLine />}
+            </button>
+          </div>
         </header>
         <main className="content">
           {children}

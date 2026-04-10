@@ -176,6 +176,12 @@
   z-index: 50;
 }
 
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
 .header-left {
   display: flex;
   align-items: center;

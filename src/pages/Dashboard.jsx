@@ -5,7 +5,6 @@ import { useNavigate } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import './Dashboard.css'
 import { useAuth } from '../contexts/AuthContext'
-import { disablePushNotifications, enablePushNotifications, getPushStatus } from '../lib/pushNotifications'
 
 const statusLabel = {
   aberto: 'Aberto',
@@ -24,24 +23,11 @@ export default function Dashboard() {
   const [openOrdens, setOpenOrdens] = useState([])
   const [loading, setLoading] = useState(true)
 
-  const [pushInfo, setPushInfo] = useState({ supported: false, permission: 'default', subscribed: false })
-  const [pushLoading, setPushLoading] = useState(false)
-
   const [techModal, setTechModal] = useState({ open: false, os: null, tecnico: '', saving: false })
 
   useEffect(() => {
     fetchAll()
-    refreshPushInfo()
   }, [])
-
-  async function refreshPushInfo() {
-    try {
-      const info = await getPushStatus()
-      setPushInfo(info)
-    } catch {
-      setPushInfo({ supported: false, permission: 'default', subscribed: false })
-    }
-  }
 
   async function fetchAll() {
     setLoading(true)
@@ -75,39 +61,6 @@ export default function Dashboard() {
     setLoading(false)
   }
 
-  async function handleEnablePush() {
-    if (!session?.user?.id) {
-      toast.error('Faça login para ativar notificações')
-      return
-    }
-    setPushLoading(true)
-    try {
-      await enablePushNotifications({ supabase, userId: session.user.id })
-      toast.success('Notificações ativadas!')
-      await refreshPushInfo()
-    } catch (e) {
-      console.error(e)
-      toast.error(e?.message || 'Não foi possível ativar')
-    }
-    setPushLoading(false)
-  }
-
-  async function handleDisablePush() {
-    if (!session?.user?.id) {
-      toast.error('Faça login para desativar notificações')
-      return
-    }
-    setPushLoading(true)
-    try {
-      await disablePushNotifications({ supabase, userId: session.user.id })
-      toast.success('Notificações desativadas!')
-      await refreshPushInfo()
-    } catch (e) {
-      console.error(e)
-      toast.error(e?.message || 'Não foi possível desativar')
-    }
-    setPushLoading(false)
-  }
 
   function openTechModal(os) {
     setTechModal({ open: true, os, tecnico: '', saving: false })
@@ -169,29 +122,6 @@ export default function Dashboard() {
             <RiArrowRightLine className="stat-arrow" />
           </div>
         ))}
-      </div>
-
-      <div className="card">
-        <div className="card-title-row">
-          <h3>Notificações</h3>
-        </div>
-
-        {!pushInfo.supported ? (
-          <p className="text-gray" style={{ marginTop: 10 }}>Seu navegador não suporta notificações push.</p>
-        ) : pushInfo.permission === 'denied' ? (
-          <p className="text-gray" style={{ marginTop: 10 }}>Notificações bloqueadas no navegador. Ative nas configurações do aparelho.</p>
-        ) : pushInfo.subscribed ? (
-          <>
-            <p className="text-gray" style={{ marginTop: 10 }}>Notificações ativadas neste aparelho.</p>
-            <button className="btn btn-secondary" style={{ width: '100%', justifyContent: 'center', marginTop: 12 }} onClick={handleDisablePush} disabled={pushLoading}>
-              {pushLoading ? 'Desativando...' : 'Desativar Notificações'}
-            </button>
-          </>
-        ) : (
-          <button className="btn btn-primary" style={{ width: '100%', justifyContent: 'center', marginTop: 12 }} onClick={handleEnablePush} disabled={pushLoading}>
-            {pushLoading ? 'Ativando...' : 'Ativar Notificações'}
-          </button>
-        )}
       </div>
 
       {/* Mobile app experience */}
