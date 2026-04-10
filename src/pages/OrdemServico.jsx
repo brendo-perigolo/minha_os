@@ -4,6 +4,7 @@ import { RiAddLine, RiSearchLine, RiEyeLine, RiDeleteBinLine, RiFileListLine, Ri
 import { useNavigate } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import { gerarPdfOrdemServico } from '../lib/ordemServicoPdf'
+import './OrdemServico.css'
 
 const STATUS_LABELS = {
   aberto: 'Aberto',
@@ -132,70 +133,107 @@ export default function OrdemServico() {
     <div>
       <div className="page-header">
         <h2>Ordens de Serviço</h2>
-        <div className="page-tools">
-          <div className="search-bar">
+        <div className="page-tools os-tools">
+          <div className="os-tools-top">
+            <select className="form-control" value={filterStatus} onChange={e => setFilterStatus(e.target.value)}>
+              <option value="">Todos os status</option>
+              {Object.entries(STATUS_LABELS).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+            </select>
+            <button className="btn btn-primary btn-sm" onClick={() => navigate('/ordens/nova')}>
+              <RiAddLine /> Nova OS
+            </button>
+          </div>
+
+          <div className="search-bar os-tools-search">
             <RiSearchLine className="search-icon" />
             <input className="form-control" placeholder="Buscar por cliente ou nº..." value={search} onChange={e => setSearch(e.target.value)} />
           </div>
-          <select className="form-control" style={{ width: 'auto' }} value={filterStatus} onChange={e => setFilterStatus(e.target.value)}>
-            <option value="">Todos os status</option>
-            {Object.entries(STATUS_LABELS).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
-          </select>
-          <button className="btn btn-primary" onClick={() => navigate('/ordens/nova')}>
-            <RiAddLine /> Nova OS
-          </button>
         </div>
       </div>
 
       <div className="card">
-        <div className="table-wrapper">
-          {loading ? (
-            <div className="empty-state"><p>Carregando...</p></div>
-          ) : filtered.length === 0 ? (
-            <div className="empty-state">
-              <RiFileListLine />
-              <p>Nenhuma ordem encontrada.</p>
-              <button className="btn btn-primary btn-sm" onClick={() => navigate('/ordens/nova')}>Criar primeira OS</button>
+        {loading ? (
+          <div className="empty-state"><p>Carregando...</p></div>
+        ) : filtered.length === 0 ? (
+          <div className="empty-state">
+            <RiFileListLine />
+            <p>Nenhuma ordem encontrada.</p>
+            <button className="btn btn-primary btn-sm" onClick={() => navigate('/ordens/nova')}>Criar primeira OS</button>
+          </div>
+        ) : (
+          <>
+            <div className="os-mobile-list">
+              {filtered.map(o => (
+                <div key={o.id} className="os-card">
+                  <div className="os-card-top" onClick={() => navigate(`/ordens/${o.id}`)} style={{ cursor: 'pointer' }}>
+                    <div className="os-card-os">OS #{String(o.id).padStart(4, '0')}</div>
+                    <span className={`badge badge-${o.status}`}>{STATUS_LABELS[o.status] || o.status}</span>
+                  </div>
+
+                  <div className="os-card-client" title={o.clientes?.nome || ''}>
+                    {o.clientes?.nome || '—'}
+                  </div>
+
+                  <div className="os-card-meta">
+                    <span className="fw-600">{fmt(o.total)}</span>
+                    <span>{new Date(o.created_at).toLocaleDateString('pt-BR')}</span>
+                  </div>
+
+                  <div className="os-card-actions">
+                    <button className="btn btn-secondary" title="Ver/Editar" onClick={() => navigate(`/ordens/${o.id}`)}>
+                      <RiEyeLine /> Ver
+                    </button>
+                    <button className="btn btn-secondary" title="Reimprimir" onClick={() => openPrint(o)}>
+                      <RiPrinterLine /> PDF
+                    </button>
+                    <button className="btn btn-danger" title="Excluir" onClick={() => setDeleteModal(o)}>
+                      <RiDeleteBinLine /> Excluir
+                    </button>
+                  </div>
+                </div>
+              ))}
             </div>
-          ) : (
-            <table>
-              <thead>
-                <tr>
-                  <th>Nº OS</th>
-                  <th>Cliente</th>
-                  <th>Status</th>
-                  <th>Total</th>
-                  <th>Data</th>
-                  <th>Ações</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filtered.map(o => (
-                  <tr key={o.id}>
-                    <td className="fw-600 text-red">#{String(o.id).padStart(4, '0')}</td>
-                    <td className="fw-600">{o.clientes?.nome || '—'}</td>
-                    <td><span className={`badge badge-${o.status}`}>{STATUS_LABELS[o.status] || o.status}</span></td>
-                    <td className="fw-600">{fmt(o.total)}</td>
-                    <td className="text-gray">{new Date(o.created_at).toLocaleDateString('pt-BR')}</td>
-                    <td>
-                      <div className="td-actions">
-                        <button className="btn btn-secondary btn-icon" title="Ver/Editar" onClick={() => navigate(`/ordens/${o.id}`)}>
-                          <RiEyeLine />
-                        </button>
-                        <button className="btn btn-secondary btn-icon" title="Reimprimir" onClick={() => openPrint(o)}>
-                          <RiPrinterLine />
-                        </button>
-                        <button className="btn btn-danger btn-icon" title="Excluir" onClick={() => setDeleteModal(o)}>
-                          <RiDeleteBinLine />
-                        </button>
-                      </div>
-                    </td>
+
+            <div className="table-wrapper os-desktop-table">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Nº OS</th>
+                    <th>Cliente</th>
+                    <th>Status</th>
+                    <th>Total</th>
+                    <th>Data</th>
+                    <th>Ações</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
-        </div>
+                </thead>
+                <tbody>
+                  {filtered.map(o => (
+                    <tr key={o.id}>
+                      <td className="fw-600 text-red">#{String(o.id).padStart(4, '0')}</td>
+                      <td className="fw-600">{o.clientes?.nome || '—'}</td>
+                      <td><span className={`badge badge-${o.status}`}>{STATUS_LABELS[o.status] || o.status}</span></td>
+                      <td className="fw-600">{fmt(o.total)}</td>
+                      <td className="text-gray">{new Date(o.created_at).toLocaleDateString('pt-BR')}</td>
+                      <td>
+                        <div className="td-actions">
+                          <button className="btn btn-secondary btn-icon" title="Ver/Editar" onClick={() => navigate(`/ordens/${o.id}`)}>
+                            <RiEyeLine />
+                          </button>
+                          <button className="btn btn-secondary btn-icon" title="Reimprimir" onClick={() => openPrint(o)}>
+                            <RiPrinterLine />
+                          </button>
+                          <button className="btn btn-danger btn-icon" title="Excluir" onClick={() => setDeleteModal(o)}>
+                            <RiDeleteBinLine />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </>
+        )}
       </div>
 
       {printModal.open && (

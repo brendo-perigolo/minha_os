@@ -201,16 +201,20 @@ export default function Layout({ children }) {
 
       {/* Main */}
       <div className="main">
-        <header className="header">
+        <header className={`header ${location.pathname === '/' ? 'is-dashboard' : ''}`}>
           <div className="header-left">
             <button className="menu-btn" onClick={() => setSidebarOpen(true)}>
               <RiMenuLine />
             </button>
+            <NavLink to="/" className="mobile-brand" aria-label="Ir para o Dashboard">
+              <img className="mobile-brand-icon" src="/brand/mark.svg" alt="" />
+              <span className="mobile-brand-name">ELETROCED</span>
+            </NavLink>
             <h1 className="header-title">{pageTitle}</h1>
           </div>
           <div className="header-right">
             <button
-              className="btn btn-secondary btn-icon"
+              className={`btn btn-secondary btn-icon ${pushInfo.subscribed ? 'push-active' : ''}`}
               onClick={togglePush}
               disabled={pushLoading}
               title={pushInfo.subscribed ? 'Desativar notificações' : 'Ativar notificações'}
@@ -223,6 +227,13 @@ export default function Layout({ children }) {
               title={theme === 'dark' ? 'Mudar para tema claro' : 'Mudar para tema escuro'}
             >
               {theme === 'dark' ? <RiSunLine /> : <RiMoonLine />}
+            </button>
+            <button
+              className="btn btn-secondary btn-icon"
+              onClick={() => supabase.auth.signOut()}
+              title="Sair"
+            >
+              <RiLogoutBoxRLine />
             </button>
           </div>
         </header>

@@ -4,6 +4,7 @@
   --red: #ef4444;
   --red-light: #f87171;
   --red-dark: #dc2626;
+  --on-accent: #ffffff;
   --dark: #1a1a1a;
   --dark-2: #232323;
   --dark-3: #2d2d2d;
@@ -56,6 +57,14 @@ body {
   overflow-x: hidden;
 }
 
+html, body, #root {
+  max-width: 100%;
+}
+
+img, video, canvas {
+  max-width: 100%;
+}
+
 button {
   cursor: pointer;
   font-family: inherit;
@@ -92,7 +101,7 @@ a {
 
 .btn-primary {
   background: var(--red);
-  color: var(--white);
+  color: var(--on-accent);
 }
 .btn-primary:hover {
   background: var(--red-light);
@@ -197,6 +206,8 @@ select.form-control option {
 /* Table */
 .table-wrapper {
   overflow-x: auto;
+  max-width: 100%;
+  -webkit-overflow-scrolling: touch;
 }
 
 table {
@@ -350,6 +361,45 @@ tbody td {
   display: flex;
   gap: 12px;
   align-items: center;
+}
+
+@media (max-width: 768px) {
+  .page-header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+
+  .page-tools {
+    flex-direction: column;
+    align-items: stretch;
+    width: 100%;
+  }
+
+  .search-bar {
+    max-width: none;
+    width: 100%;
+  }
+
+  .form-row {
+    grid-template-columns: 1fr;
+  }
+
+  .modal-overlay {
+    padding: 16px;
+  }
+
+  .modal-header,
+  .modal-body,
+  .modal-footer {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+
+  .modal-footer {
+    flex-direction: column;
+    align-items: stretch;
+  }
 }
 
 /* Animations */

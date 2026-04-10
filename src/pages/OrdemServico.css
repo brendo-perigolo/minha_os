@@ -1,0 +1,98 @@
+.os-mobile-list {
+  display: none;
+}
+
+/* Header tools (Ordens) */
+.os-tools {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 10px;
+}
+
+.os-tools-top {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.os-tools-top .form-control {
+  width: 100%;
+  padding-top: 8px;
+  padding-bottom: 8px;
+  font-size: 13px;
+}
+
+.os-tools-top .btn.btn-sm {
+  padding: 8px 14px;
+}
+
+.os-tools-search {
+  max-width: none;
+  width: 100%;
+}
+
+.os-card {
+  background: var(--dark-2);
+  border: 1px solid var(--white-border);
+  border-radius: var(--radius-lg);
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.os-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.os-card-os {
+  font-weight: 900;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+.os-card-client {
+  font-weight: 700;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.os-card-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  color: var(--gray-light);
+  font-size: 12px;
+}
+
+.os-card-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.os-card-actions .btn {
+  flex: 1;
+  justify-content: center;
+}
+
+@media (max-width: 768px) {
+  .os-desktop-table {
+    display: none;
+  }
+
+  .os-mobile-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .os-tools-top {
+    flex-direction: row;
+  }
+}

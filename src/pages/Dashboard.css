@@ -11,6 +11,20 @@
   padding: 28px 32px;
 }
 
+.dash-welcome.dash-welcome-app {
+  background: var(--dark-2);
+  border: 1px solid var(--white-border);
+}
+
+.dash-user-title {
+  font-size: 18px;
+  font-weight: 800;
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .dash-welcome h2 {
   font-size: 24px;
   font-weight: 700;
@@ -78,6 +92,7 @@
 
 .stat-info {
   flex: 1;
+  min-width: 0;
 }
 
 .stat-value {
@@ -116,7 +131,34 @@
   .dash-stats { grid-template-columns: repeat(2, 1fr); }
 }
 @media (max-width: 500px) {
-  .dash-stats { grid-template-columns: 1fr; }
+  /* App/mobile: cards em grade 2x2 */
+  .dash-stats { grid-template-columns: repeat(2, 1fr); }
+
+  .stat-card {
+    padding: 14px;
+    gap: 12px;
+  }
+
+  .stat-icon {
+    width: 40px;
+    height: 40px;
+    font-size: 20px;
+    border-radius: 10px;
+  }
+
+  .stat-value {
+    font-size: 22px;
+  }
+
+  .stat-label {
+    font-size: 12px;
+    white-space: normal;
+    line-height: 1.1;
+  }
+
+  .stat-arrow {
+    display: none;
+  }
 }
 
 /* Mobile: app-like experience */

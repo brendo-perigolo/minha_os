@@ -118,7 +118,7 @@ export default function OrdemServicoForm() {
   const [novoEqp, setNovoEqp] = useState({ modelo: '', marca: '', numero_serie: '', voltagem: '' })
 
   const [showClienteModal, setShowClienteModal] = useState(false)
-  const [novoCliente, setNovoCliente] = useState({ nome: '', telefone: '' })
+  const [novoCliente, setNovoCliente] = useState({ nome: '', telefone: '', endereco: '' })
 
   // Item Dropdown
   const [addItem, setAddItem] = useState({ temp_id: '', quantidade: 1 })
@@ -138,7 +138,7 @@ export default function OrdemServicoForm() {
   async function fetchInit() {
     setLoading(true)
     const [{ data: cls }, { data: prodsView, error: prodsViewErr }, { data: servs }] = await Promise.all([
-      supabase.from('clientes').select('id, nome, telefone').order('nome'),
+      supabase.from('clientes').select('id, nome, telefone, endereco').order('nome'),
       supabase.from('vw_produtos_estoque').select('id, nome, preco, unidade, estoque, estoque_reservado, estoque_livre').order('nome'),
       supabase.from('servicos').select('id, nome, preco').order('nome'),
     ])
@@ -237,7 +237,8 @@ export default function OrdemServicoForm() {
     setSaving(true)
     const { data, error } = await supabase.from('clientes').insert([{
       nome: novoCliente.nome,
-      telefone: novoCliente.telefone
+      telefone: novoCliente.telefone,
+      endereco: novoCliente.endereco || null,
     }]).select().single()
 
     if (error) { toast.error('Erro ao salvar cliente'); setSaving(false); return }
@@ -245,7 +246,7 @@ export default function OrdemServicoForm() {
     setClientes(prev => [...prev, data].sort((a,b) => a.nome.localeCompare(b.nome)))
     setForm(f => ({ ...f, cliente_id: data.id }))
     setShowClienteModal(false)
-    setNovoCliente({ nome: '', telefone: '' })
+    setNovoCliente({ nome: '', telefone: '', endereco: '' })
     setSaving(false)
     toast.success('Cliente adicionado!')
   }
@@ -852,7 +853,7 @@ export default function OrdemServicoForm() {
           <div className="card">
             <h3 className="section-title">Itens da Ordem (Produtos e Serviços)</h3>
             
-            <div style={{ display: 'flex', gap: 8, marginTop: 16, alignItems: 'center', width: '50%', minWidth: '300px' }}>
+            <div className="add-item-row">
               <div style={{ flex: 1 }}>
                 <Select
                   options={itemOptions}
@@ -975,7 +976,7 @@ export default function OrdemServicoForm() {
             <input
               className="form-control"
               type="text"
-              style={{ marginTop: 12, width: '50%', minWidth: '300px' }}
+              style={{ marginTop: 12, width: '100%' }}
               placeholder="Ex: Em 3x de R$ 50, Metade na entrada, À vista..."
               value={form.condicao_pagamento}
               onChange={e => setForm(f => ({ ...f, condicao_pagamento: e.target.value }))}
@@ -1177,6 +1178,10 @@ export default function OrdemServicoForm() {
                 <div className="form-group" style={{ marginTop: 16 }}>
                   <label>Telefone</label>
                   <input className="form-control" placeholder="(00) 00000-0000" value={novoCliente.telefone} onChange={e => setNovoCliente(c => ({ ...c, telefone: e.target.value }))} />
+                </div>
+                <div className="form-group" style={{ marginTop: 16 }}>
+                  <label>Endereço</label>
+                  <input className="form-control" placeholder="Rua, número, bairro, cidade" value={novoCliente.endereco || ''} onChange={e => setNovoCliente(c => ({ ...c, endereco: e.target.value }))} />
                 </div>
               </div>
               <div className="modal-footer" style={{ marginTop: 24, paddingTop: 16, paddingBottom: 16, borderTop: '1px solid var(--white-border)', display: 'flex', justifyContent: 'flex-end', gap: 12 }}>

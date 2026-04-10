@@ -98,6 +98,7 @@
   gap: 10px;
   align-items: center;
   margin-top: 16px;
+  width: 100%;
 }
 
 .qty-input {
@@ -244,5 +245,9 @@
   }
   .add-item-row {
     flex-wrap: wrap;
+  }
+
+  .qty-input {
+    width: 80px;
   }
 }

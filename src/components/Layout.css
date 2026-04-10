@@ -159,6 +159,7 @@
   display: flex;
   flex-direction: column;
   min-height: 100vh;
+  min-width: 0;
 }
 
 /* Header */
@@ -186,11 +187,52 @@
   display: flex;
   align-items: center;
   gap: 16px;
+  min-width: 0;
 }
 
 .header-title {
   font-size: 18px;
   font-weight: 700;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mobile-brand {
+  display: none;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  padding: 6px 8px;
+  border-radius: 10px;
+}
+
+.mobile-brand:hover {
+  background: var(--white-dim);
+}
+
+.mobile-brand-icon {
+  width: 28px;
+  height: 28px;
+  display: block;
+  flex-shrink: 0;
+}
+
+.mobile-brand-name {
+  font-size: 14px;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.btn.push-active {
+  color: var(--warning);
+}
+.btn.push-active:hover {
+  border-color: color-mix(in srgb, var(--warning) 50%, var(--white-border));
 }
 
 .menu-btn {
@@ -212,6 +254,8 @@
   flex: 1;
   padding: 32px;
   overflow-y: auto;
+  min-width: 0;
+  max-width: 100%;
 }
 
 /* Responsive */
@@ -242,5 +286,18 @@
 
   .content {
     padding: 20px 16px;
+  }
+
+  .header {
+    padding: 0 16px;
+  }
+
+  /* Mobile: no Dashboard, mostrar marca (logo + nome) no lugar do título */
+  .header.is-dashboard .mobile-brand {
+    display: inline-flex;
+  }
+
+  .header.is-dashboard .header-title {
+    display: none;
   }
 }

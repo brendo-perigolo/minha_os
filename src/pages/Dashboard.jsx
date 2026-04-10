@@ -17,7 +17,7 @@ const statusLabel = {
 
 export default function Dashboard() {
   const navigate = useNavigate()
-  const { session } = useAuth()
+  const { session, userProfile } = useAuth()
   const [stats, setStats] = useState({ clientes: 0, produtos: 0, servicos: 0, ordens: 0 })
   const [recentOrdens, setRecentOrdens] = useState([])
   const [openOrdens, setOpenOrdens] = useState([])
@@ -127,12 +127,13 @@ export default function Dashboard() {
     { label: 'Ordens de Serviço', value: stats.ordens, icon: <RiFileListLine />, color: '#C41E2A', to: '/ordens' },
   ]
 
+  const loggedUserLabel = userProfile?.nome || session?.user?.email || 'Usuário'
+
   return (
     <div className="dashboard">
-      <div className="dash-welcome">
+      <div className="dash-welcome dash-welcome-app">
         <div className="dash-welcome-text">
-          <h2>Bem-vindo ao Sistema <span>ELETROCED</span></h2>
-          <p>Gerencie suas ordens de serviço de forma simples e eficiente.</p>
+          <h2 className="dash-user-title">{loggedUserLabel}</h2>
         </div>
       </div>
 
