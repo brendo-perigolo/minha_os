@@ -1,6 +1,7 @@
 {
   "name": "ELETROCED - Sistema OS",
   "short_name": "ELETROCED",
+  "lang": "pt-BR",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
