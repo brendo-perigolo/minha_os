@@ -36,7 +36,9 @@ export async function enablePushNotifications({ supabase, userId }) {
 
   const vapidPublicKey = import.meta.env.VITE_VAPID_PUBLIC_KEY
   if (!vapidPublicKey) {
-    throw new Error('Falta configurar VITE_VAPID_PUBLIC_KEY no .env')
+    throw new Error(
+      'Falta configurar VITE_VAPID_PUBLIC_KEY (Vercel: Project Settings → Environment Variables; local: .env.local).'
+    )
   }
 
   const registration = await getSwRegistration()
