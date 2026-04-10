@@ -34,10 +34,19 @@ export async function enablePushNotifications({ supabase, userId }) {
     throw new Error('Permissão de notificação negada')
   }
 
-  const vapidPublicKey = import.meta.env.VITE_VAPID_PUBLIC_KEY
+  const vapidPublicKey = (import.meta.env.VITE_VAPID_PUBLIC_KEY || '').trim()
   if (!vapidPublicKey) {
+    // Diagnóstico seguro (não imprime a chave)
+    if (typeof window !== 'undefined') {
+      // eslint-disable-next-line no-console
+      console.warn('[push] Missing VITE_VAPID_PUBLIC_KEY at runtime', {
+        origin: window.location?.origin,
+        mode: import.meta.env.MODE,
+        prod: import.meta.env.PROD,
+      })
+    }
     throw new Error(
-      'Falta configurar VITE_VAPID_PUBLIC_KEY (Vercel: Project Settings → Environment Variables; local: .env.local).'
+      `Falta configurar VITE_VAPID_PUBLIC_KEY (mode: ${import.meta.env.MODE}).`
     )
   }
 
