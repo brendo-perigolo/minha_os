@@ -13,6 +13,40 @@ function urlBase64ToUint8Array(base64String) {
   return outputArray
 }
 
+async function getVapidPublicKey() {
+  const fromEnv = String(import.meta.env.VITE_VAPID_PUBLIC_KEY || '').trim()
+  if (fromEnv) return fromEnv
+
+  // Fallback for static hosting (e.g. Vercel) when env vars weren't embedded at build time.
+  // This is safe because VAPID public key is not a secret.
+  if (typeof window !== 'undefined') {
+    try {
+      const res = await fetch('/vapid-public-key.txt', { cache: 'no-store' })
+      if (res.ok) {
+        const text = String(await res.text()).trim()
+        if (text) return text
+      }
+    } catch {
+      // ignore and fall through to the error below
+    }
+  }
+
+  if (typeof window !== 'undefined') {
+    // eslint-disable-next-line no-console
+    console.warn('[push] Missing VITE_VAPID_PUBLIC_KEY at runtime', {
+      origin: window.location?.origin,
+      mode: import.meta.env.MODE,
+      prod: import.meta.env.PROD,
+    })
+  }
+
+  throw new Error(
+    `Falta configurar VITE_VAPID_PUBLIC_KEY (mode: ${import.meta.env.MODE}). ` +
+      `Configure no Vercel (Project Settings → Environment Variables) ` +
+      `ou publique a chave em /vapid-public-key.txt.`
+  )
+}
+
 export function isPushSupported() {
   return typeof window !== 'undefined' && 'serviceWorker' in navigator && 'PushManager' in window
 }
@@ -34,21 +68,8 @@ export async function enablePushNotifications({ supabase, userId }) {
     throw new Error('Permissão de notificação negada')
   }
 
-  const vapidPublicKey = (import.meta.env.VITE_VAPID_PUBLIC_KEY || '').trim()
-  if (!vapidPublicKey) {
-    // Diagnóstico seguro (não imprime a chave)
-    if (typeof window !== 'undefined') {
-      // eslint-disable-next-line no-console
-      console.warn('[push] Missing VITE_VAPID_PUBLIC_KEY at runtime', {
-        origin: window.location?.origin,
-        mode: import.meta.env.MODE,
-        prod: import.meta.env.PROD,
-      })
-    }
-    throw new Error(
-      `Falta configurar VITE_VAPID_PUBLIC_KEY (mode: ${import.meta.env.MODE}).`
-    )
-  }
+
+  const vapidPublicKey = await getVapidPublicKey()
 
   const registration = await getSwRegistration()
   if (!registration) throw new Error('Service Worker não disponível')
