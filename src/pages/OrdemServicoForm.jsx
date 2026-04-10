@@ -558,11 +558,16 @@ export default function OrdemServicoForm() {
             const sent = Number(fnData?.sent ?? 0)
             const errorsCount = Number(fnData?.errorsCount ?? 0)
             if (sent > 0) {
-              toast.success(`Notificação enviada (${sent})!`)
+              toast.success(
+                errorsCount > 0
+                  ? `Notificação enviada (${sent}) com falhas (${errorsCount}).`
+                  : `Notificação enviada (${sent})!`
+              )
             } else {
+              const firstError = fnData?.errors?.[0]?.error
               toast.error(
                 errorsCount > 0
-                  ? 'Falha ao enviar (verifique logs da função)'
+                  ? `Falha ao enviar: ${firstError || 'verifique logs da função'}`
                   : 'Nenhum dispositivo inscrito para receber'
               )
             }

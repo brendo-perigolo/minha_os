@@ -90,7 +90,7 @@ serve(async (req) => {
 
       let sent = 0
       let removed = 0
-      const errors: Array<{ id: string; error: string }> = []
+      const errors: Array<{ id: string; statusCode?: number; error: string }> = []
 
       await Promise.all((subs || []).map(async (s: any) => {
         const subscription = {
@@ -107,8 +107,8 @@ serve(async (req) => {
           sent += 1
         } catch (e: any) {
           const statusCode = e?.statusCode
-          const msg = e?.message || 'Erro ao enviar'
-          errors.push({ id: s.id, error: msg })
+          const msg = e?.message || e?.body || 'Erro ao enviar'
+          errors.push({ id: s.id, statusCode, error: String(msg) })
 
           // Remove subscriptions expiradas
           if (statusCode === 404 || statusCode === 410) {
@@ -119,7 +119,17 @@ serve(async (req) => {
       }))
 
       return new Response(
-        JSON.stringify({ success: true, sent, removed, errorsCount: errors.length }),
+        JSON.stringify({
+          success: true,
+          subscriptionCount: (subs || []).length,
+          sent,
+          removed,
+          errorsCount: errors.length,
+          errors: errors.slice(0, 5),
+          // Debug seguro: não expõe chave privada
+          vapidPublicKeyPrefix: vapidPublicKey ? vapidPublicKey.slice(0, 8) : null,
+          vapidPublicKeyLength: vapidPublicKey ? vapidPublicKey.length : 0,
+        }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
