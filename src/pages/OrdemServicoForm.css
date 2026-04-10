@@ -1,0 +1,248 @@
+.os-form {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.os-form-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.os-form-title {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.os-form-title h2 {
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.os-form-actions {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+/* Budget Banner */
+.orcamento-banner {
+  background: linear-gradient(135deg, rgba(245,158,11,0.15), rgba(245,158,11,0.05));
+  border: 1px solid rgba(245,158,11,0.35);
+  border-radius: var(--radius-lg);
+  padding: 16px 20px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  color: #f59e0b;
+}
+
+.orcamento-banner svg {
+  font-size: 28px;
+  flex-shrink: 0;
+}
+
+.orcamento-banner strong {
+  display: block;
+  font-weight: 700;
+  margin-bottom: 2px;
+  font-size: 15px;
+}
+
+.orcamento-banner p {
+  font-size: 13px;
+  color: rgba(245,158,11,0.8);
+}
+
+.orcamento-banner .btn {
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+/* Layout */
+.os-form-body {
+  display: grid;
+  grid-template-columns: 1fr 280px;
+  gap: 20px;
+  align-items: start;
+}
+
+.os-col-main {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.os-col-side {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  position: sticky;
+  top: calc(var(--header-height) + 16px);
+}
+
+.section-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--white);
+}
+
+/* Add item row */
+.add-item-row {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  margin-top: 16px;
+}
+
+.qty-input {
+  width: 90px;
+  flex-shrink: 0;
+}
+
+/* Totals */
+.totals-card {
+  border: 1px solid rgba(196,30,42,0.3);
+}
+
+.total-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 0;
+  font-size: 14px;
+  color: var(--gray-light);
+}
+
+.total-divider {
+  height: 1px;
+  background: var(--white-border);
+  margin: 4px 0;
+}
+
+.total-grand {
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--white);
+  padding-top: 14px;
+}
+
+.total-grand .text-red {
+  font-size: 22px;
+}
+
+/* In-table Inputs */
+.table-input {
+  padding: 6px 8px;
+  font-size: 13px;
+  height: auto;
+  border-radius: 6px;
+  background: var(--dark-2);
+}
+
+.table-input-price {
+  width: 90px;
+}
+
+.table-input-qty {
+  width: 60px;
+}
+
+/* Status Selector */
+.status-btn {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  background: var(--dark-3);
+  border: 1px solid var(--white-border);
+  border-radius: var(--radius);
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--white);
+  cursor: pointer;
+  transition: var(--transition);
+  outline: none;
+  width: 100%;
+}
+
+.status-btn:hover {
+  background: var(--white-dim);
+}
+
+.status-btn.active {
+  border-color: var(--red);
+  background: rgba(196, 30, 42, 0.05); /* very subtle red background */
+  box-shadow: 0 0 0 1px var(--red);
+}
+
+.status-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.status-aberto { background: #eab308; }
+.status-orcamento { background: #f59e0b; }
+.status-aprovado { background: #22c55e; }
+.status-em_andamento { background: #3b82f6; }
+.status-concluido { background: #8b5cf6; }
+.status-cancelado { background: #ef4444; }
+
+/* IMPRESSÃO PDF A4 */
+.print-container {
+  display: none;
+  background-color: white;
+  width: 100%;
+  height: 100vh;
+}
+
+@media print {
+  /* Esconder Header do App, Sidebar e Tela Principal da OS */
+  .sidebar, .top-header, .os-form, .modal-overlay, .toast-container {
+    display: none !important;
+  }
+  
+  /* Exibir exclusivamente a folha de impressao */
+  .print-container {
+    display: block !important;
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+    background-color: white;
+  }
+
+  body, html {
+    background: white;
+    color: black;
+    margin: 0;
+    padding: 0;
+  }
+  
+  /* Garantir que imagens e cores funcionem no background de paginas impressas */
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+}
+
+@media (max-width: 900px) {
+  .os-form-body {
+    grid-template-columns: 1fr;
+  }
+  .os-col-side {
+    position: static;
+  }
+  .add-item-row {
+    flex-wrap: wrap;
+  }
+}

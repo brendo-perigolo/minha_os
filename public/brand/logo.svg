@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="220" viewBox="0 0 900 220" role="img" aria-label="ELETROCED">
+  <defs>
+    <style>
+      .red{fill:#C41E2A}
+      .white{fill:#ffffff}
+      .stroke{paint-order:stroke; stroke:#ffffff; stroke-width:10px; stroke-linejoin:round}
+    </style>
+  </defs>
+
+  <!-- Mark -->
+  <g transform="translate(30,30)">
+    <rect x="0" y="0" width="160" height="160" rx="26" class="white"/>
+    <rect x="0" y="0" width="160" height="160" rx="26" fill="none" stroke="#C41E2A" stroke-width="12"/>
+    <text x="80" y="115" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-weight="900" font-size="110" class="red">E</text>
+  </g>
+
+  <!-- Wordmark -->
+  <g transform="translate(230,60)">
+    <text x="0" y="100" font-family="Arial Black, Arial, Helvetica, sans-serif" font-weight="900" font-size="90" class="red stroke">ELETROCED</text>
+  </g>
+</svg>
