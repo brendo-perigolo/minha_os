@@ -55,10 +55,10 @@ serve(async (req) => {
         })
       }
 
-      // Import dinâmico para não travar o preflight (OPTIONS) em cold start.
-      // Em alguns ambientes, imports npm no topo podem demorar e causar 504.
-      const webpushModule: any = await import('https://esm.sh/web-push@3.6.7?target=deno')
-      const wp: any = webpushModule?.default ?? webpushModule
+      // Import dinâmico para reduzir cold start.
+      // Usamos uma lib compatível com WebCrypto (Supabase Edge / Deno).
+      // A lib `web-push` (Node) falha no Edge com: "Not implemented: crypto.ECDH".
+      const { buildPushPayload } = await import('npm:@block65/webcrypto-web-push@1.0.2')
 
       const vapidPublicKey = Deno.env.get('VAPID_PUBLIC_KEY') ?? ''
       const vapidPrivateKey = Deno.env.get('VAPID_PRIVATE_KEY') ?? ''
@@ -71,7 +71,11 @@ serve(async (req) => {
         })
       }
 
-      wp.setVapidDetails(vapidSubject, vapidPublicKey, vapidPrivateKey)
+      const vapid = {
+        subject: vapidSubject,
+        publicKey: vapidPublicKey,
+        privateKey: vapidPrivateKey,
+      }
 
       const osId = payload?.osId
       const numero = payload?.numero ? String(payload.numero) : String(osId ?? '').padStart(4, '0')
@@ -93,18 +97,46 @@ serve(async (req) => {
       const errors: Array<{ id: string; statusCode?: number; error: string }> = []
 
       await Promise.all((subs || []).map(async (s: any) => {
-        const subscription = {
-          endpoint: s.endpoint,
-          keys: { p256dh: s.p256dh, auth: s.auth },
-        }
         try {
-          await wp.sendNotification(subscription, JSON.stringify({
-            title,
-            body,
-            url,
-            tag: `os-${numero}`,
-          }))
-          sent += 1
+          const subscription = {
+            endpoint: String(s.endpoint),
+            expirationTime: null,
+            keys: {
+              p256dh: String(s.p256dh),
+              auth: String(s.auth),
+            },
+          }
+
+          const message = {
+            data: JSON.stringify({
+              title,
+              body,
+              url,
+              tag: `os-${numero}`,
+            }),
+            options: {
+              ttl: 60 * 60, // 1h
+              urgency: 'high',
+              topic: `os-${numero}`,
+            },
+          }
+
+          const requestInit = await buildPushPayload(message, subscription, vapid)
+          const resp = await fetch(subscription.endpoint, requestInit)
+          if (resp.ok) {
+            sent += 1
+            return
+          }
+
+          const text = await resp.text().catch(() => '')
+          const statusCode = resp.status
+          const msg = text || resp.statusText || 'Erro ao enviar'
+          errors.push({ id: s.id, statusCode, error: String(msg) })
+
+          if (statusCode === 404 || statusCode === 410) {
+            await supabase.from('push_subscriptions').delete().eq('id', s.id)
+            removed += 1
+          }
         } catch (e: any) {
           const statusCode = e?.statusCode
           const msg = e?.message || e?.body || 'Erro ao enviar'
