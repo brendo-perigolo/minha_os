@@ -4,7 +4,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import {
   RiArrowLeftLine, RiAddLine, RiDeleteBinLine,
   RiCheckboxCircleLine, RiSaveLine, RiMoneyDollarCircleLine,
-  RiBankCardLine, RiQuestionAnswerLine, RiWhatsappLine
+  RiBankCardLine, RiQuestionAnswerLine, RiWhatsappLine, RiEyeLine
 } from 'react-icons/ri'
 import { MdPix, MdOutlineAttachMoney, MdCreditCard } from 'react-icons/md'
 import toast from 'react-hot-toast'
@@ -100,6 +100,11 @@ export default function OrdemServicoForm() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [showPayModal, setShowPayModal] = useState(false)
+  const [showStatusModal, setShowStatusModal] = useState(false)
+  const [showProblemaModal, setShowProblemaModal] = useState(false)
+  const [showItensResumoModal, setShowItensResumoModal] = useState(false)
+
+  const [qtyModal, setQtyModal] = useState({ open: false, temp_id: '', quantidade: 1 })
 
   const confirmResolverRef = useRef(null)
   const [confirmModal, setConfirmModal] = useState({
@@ -121,7 +126,9 @@ export default function OrdemServicoForm() {
   const [novoCliente, setNovoCliente] = useState({ nome: '', telefone: '', endereco: '' })
 
   // Item Dropdown
-  const [addItem, setAddItem] = useState({ temp_id: '', quantidade: 1 })
+  const [addItem, setAddItem] = useState({ temp_id: '' })
+
+  const [expandedItemKey, setExpandedItemKey] = useState(null)
 
   useEffect(() => { fetchInit() }, [])
 
@@ -180,6 +187,9 @@ export default function OrdemServicoForm() {
 
   const isLocked = !isNew && estoqueBaixado === true
 
+  const problemaText = String(form.problema_reclamado || '')
+  const isProblemaLongo = (problemaText.trim().length > 120) || problemaText.includes('\n')
+
   const origQtyByProduto = useMemo(() => {
     const map = {}
     for (const i of origItensProdutos) {
@@ -209,6 +219,9 @@ export default function OrdemServicoForm() {
   const totalProdutos = itensProdutos.reduce((acc, i) => acc + (Number(i.preco_unitario) * Number(i.quantidade)), 0)
   const totalServicos = itensServicos.reduce((acc, i) => acc + (Number(i.preco_unitario) * Number(i.quantidade)), 0)
   const total = totalProdutos + totalServicos
+
+  const totalQtdProdutos = itensProdutos.reduce((acc, i) => acc + Number(i.quantidade || 0), 0)
+  const totalQtdServicos = itensServicos.reduce((acc, i) => acc + Number(i.quantidade || 0), 0)
 
   const handleSalvarEquipamento = async (e) => {
     e.preventDefault()
@@ -251,20 +264,38 @@ export default function OrdemServicoForm() {
     toast.success('Cliente adicionado!')
   }
 
-  function adicionarItemGenerico() {
+  function openQtyModal() {
     if (!addItem.temp_id) return toast.error('Selecione um item')
-    
-    const [tipo, strId] = addItem.temp_id.split('-')
+    setQtyModal({ open: true, temp_id: addItem.temp_id, quantidade: 1 })
+  }
+
+  function getItemNameFromTempId(tempId) {
+    if (!tempId) return ''
+    const [tipo, strId] = String(tempId).split('-')
+    const realId = Number(strId)
+    if (tipo === 'prod') return produtosDisp.find(p => Number(p.id) === realId)?.nome || ''
+    if (tipo === 'serv') return servicosDisp.find(s => Number(s.id) === realId)?.nome || ''
+    return ''
+  }
+
+  function adicionarItemComQuantidade(tempId, quantidade) {
+    if (!tempId) return toast.error('Selecione um item')
+
+    const q = Number(quantidade) || 1
+    if (!Number.isFinite(q) || q <= 0 || q !== Math.trunc(q)) {
+      return toast.error('Quantidade deve ser um número inteiro maior que zero')
+    }
+
+    const [tipo, strId] = String(tempId).split('-')
     const realId = Number(strId)
 
     if (tipo === 'prod') {
       const prod = produtosDisp.find(p => p.id === realId)
       if (!prod) return
 
-      const addQtd = Number(addItem.quantidade) || 1
       const totalAtual = getTotalAtualNaOS(prod.id)
       const disponivel = getDisponivelParaEstaOS(prod.id)
-      const nextTotal = totalAtual + addQtd
+      const nextTotal = totalAtual + q
       if (nextTotal > disponivel) {
         const restante = Math.max(0, disponivel - totalAtual)
         return toast.error(`Estoque livre insuficiente. Disponível para reservar: ${restante}`)
@@ -273,7 +304,7 @@ export default function OrdemServicoForm() {
       setItensProdutos(prev => [...prev, {
         _tempId: Date.now(),
         produto_id: prod.id,
-        quantidade: Number(addItem.quantidade) || 1,
+        quantidade: q,
         preco_unitario: prod.preco,
         produtos: { nome: prod.nome, unidade: prod.unidade }
       }])
@@ -283,12 +314,14 @@ export default function OrdemServicoForm() {
       setItensServicos(prev => [...prev, {
         _tempId: Date.now(),
         servico_id: serv.id,
-        quantidade: Number(addItem.quantidade) || 1,
+        quantidade: q,
         preco_unitario: serv.preco,
         servicos: { nome: serv.nome }
       }])
     }
-    setAddItem({ temp_id: '', quantidade: 1 })
+
+    setAddItem({ temp_id: '' })
+    setQtyModal({ open: false, temp_id: '', quantidade: 1 })
   }
 
   function removerProduto(key) {
@@ -704,13 +737,23 @@ export default function OrdemServicoForm() {
 
   const isOrcamento = form.status === 'orcamento' || form.status === 'aberto'
 
+  const showOrcamentoBtn = isOrcamento && !isNew
+  const showPagamentoBtn = form.status === 'concluido'
+  const showSalvarBtn = !showPagamentoBtn
+  const showEstornarBtn = isLocked
+  const mainActionButtonsCount =
+    (showOrcamentoBtn ? 1 : 0) +
+    (showPagamentoBtn ? 1 : 0) +
+    (showSalvarBtn ? 1 : 0) +
+    (showEstornarBtn ? 1 : 0)
+
   const clienteOptions = clientes.map(c => ({ value: c.id, label: c.nome }))
   const itemOptions = [
     {
       label: 'Produtos',
       options: produtosDisp.map(p => ({
         value: `prod-${p.id}`,
-        label: `${p.nome} (Livre: ${p.estoque_livre ?? 0} | Reserv.: ${p.estoque_reservado ?? 0} | Total: ${p.estoque || 0}) — ${fmt(p.preco)}`
+        label: `${p.nome} — ${fmt(p.preco)} — Qtd: ${p.estoque_livre ?? 0}`
       }))
     },
     {
@@ -722,57 +765,97 @@ export default function OrdemServicoForm() {
   return (
     <React.Fragment>
       <div className="os-form">
-      {/* Header */}
-      <div className="os-form-header">
-        <div className="os-form-title">
-          <button className="btn btn-secondary btn-icon" onClick={() => navigate('/ordens')}>
-            <RiArrowLeftLine />
-          </button>
-          <div>
-            <h2>{isNew ? 'Nova Ordem de Serviço' : `Editar OS #${String(id).padStart(4,'0')}`}</h2>
-            {!isNew && (
-              <span className={`badge badge-${form.status}`} style={{ marginTop: 4, display: 'inline-block' }}>
+        {/* Header */}
+        <div className="os-form-header">
+          <div className="os-form-title">
+            <button className="btn btn-secondary btn-icon" onClick={() => navigate('/ordens')}>
+              <RiArrowLeftLine />
+            </button>
+            <div>
+              <div className="os-form-title-inline">
+                <h2>{isNew ? 'Nova Ordem de Serviço' : `OS #${String(id).padStart(4, '0')}`}</h2>
+                {!isNew && (
+                  <div className="os-form-inline-total" aria-label="Total da ordem de serviço">
+                    <span>Total</span>
+                    <strong>{fmt(total)}</strong>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          <div className="os-header-right">
+            <div className="os-actions-row">
+              <button
+                type="button"
+                className={`os-actions-pill os-status-pill badge badge-${form.status}`}
+                onClick={() => setShowStatusModal(true)}
+                disabled={isLocked}
+                title={isLocked ? 'OS bloqueada' : 'Alterar status'}
+              >
                 {STATUS_LABELS[form.status]}
-              </span>
-            )}
+              </button>
+
+              <button
+                type="button"
+                className="os-actions-pill os-whatsapp-pill"
+                title="Enviar orçamento por WhatsApp"
+                onClick={handleGerarOrcamentoWhatsapp}
+                disabled={(itensProdutos.length === 0 && itensServicos.length === 0) || isLocked}
+              >
+                <RiWhatsappLine />
+              </button>
+            </div>
+
+            <div className="card os-actions-card">
+              <div className={`os-actions-main-row${mainActionButtonsCount === 1 ? ' single' : ''}`}>
+                {showOrcamentoBtn && (
+                  <button
+                    className="btn btn-info os-actions-main"
+                    onClick={() => handleSave('aprovado')}
+                    disabled={saving || isLocked}
+                  >
+                    <RiCheckboxCircleLine />
+                    Orçamento
+                  </button>
+                )}
+
+                {showPagamentoBtn ? (
+                  <button
+                    className="btn btn-success os-actions-main"
+                    onClick={() => setShowPayModal(true)}
+                    disabled={saving || isLocked}
+                  >
+                    <RiMoneyDollarCircleLine />
+                    Pagamento
+                  </button>
+                ) : (
+                  <button
+                    className="btn btn-success os-actions-main"
+                    onClick={() => handleSave()}
+                    disabled={saving || isLocked}
+                  >
+                    <RiSaveLine />
+                    Salvar
+                  </button>
+                )}
+
+                {showEstornarBtn && (
+                  <button
+                    className="btn btn-danger os-actions-main"
+                    onClick={handleEstornar}
+                    disabled={saving}
+                    title="Reabrir OS e devolver estoque"
+                  >
+                    Estornar
+                  </button>
+                )}
+              </div>
+            </div>
           </div>
         </div>
-        <div className="os-form-actions">
-          {isOrcamento && !isNew && (
-            <button
-              className="btn btn-success"
-              onClick={() => handleSave('aprovado')}
-              disabled={saving}
-            >
-              <RiCheckboxCircleLine />
-              Confirmar Orçamento
-            </button>
-          )}
-          <button
-            className="btn btn-success"
-            onClick={() => handleSave()}
-            disabled={saving || isLocked}
-          >
-            <RiSaveLine />
-            {saving ? 'Salvando...' : 'Salvar OS'}
-          </button>
 
-          {isLocked && (
-            <button
-              className="btn btn-danger"
-              onClick={handleEstornar}
-              disabled={saving}
-              title="Reabrir OS e devolver estoque"
-            >
-              Estornar
-            </button>
-          )}
-        </div>
-      </div>
-
-
-
-      <div className="os-form-body">
+        <div className="os-form-body">
         {/* Left column */}
         <div className="os-col-main">
           {/* Cliente & Status */}
@@ -836,29 +919,52 @@ export default function OrdemServicoForm() {
               </div>
             </div>
 
-            <div className="form-group" style={{ marginTop: 16 }}>
-               <label>Problema Reclamado</label>
-               <textarea
-                 className="form-control"
-                 placeholder="Descreva o problema relatado pelo cliente (Ex: Não liga, tela quebrada...)"
-                 rows={2}
-                 value={form.problema_reclamado}
-                 onChange={e => setForm(f => ({ ...f, problema_reclamado: e.target.value }))}
-                 disabled={isLocked}
-               />
+            <div className="form-group problem-highlight" style={{ marginTop: 16 }}>
+              <label>Defeito / Problema Reclamado</label>
+               {isProblemaLongo ? (
+                 <button
+                   type="button"
+                   className="problem-preview"
+                   onClick={() => setShowProblemaModal(true)}
+                   disabled={isLocked}
+                   title="Toque para ver completo"
+                 >
+                   <div className="problem-preview-text">{problemaText}</div>
+                   <div className="problem-preview-hint">Toque para ver completo</div>
+                 </button>
+               ) : (
+                 <textarea
+                   className="form-control"
+                   placeholder="Descreva o problema relatado pelo cliente (Ex: Não liga, tela quebrada...)"
+                   rows={2}
+                   value={form.problema_reclamado}
+                   onChange={e => setForm(f => ({ ...f, problema_reclamado: e.target.value }))}
+                   disabled={isLocked}
+                 />
+               )}
             </div>
           </div>
 
           {/* Produtos e Serviços Unificados */}
           <div className="card">
-            <h3 className="section-title">Itens da Ordem (Produtos e Serviços)</h3>
+            <div className="os-itens-header">
+              <h3 className="section-title" style={{ margin: 0 }}>Itens da Ordem (Produtos e Serviços)</h3>
+              <button
+                type="button"
+                className="btn btn-secondary btn-icon"
+                title="Ver resumo detalhado"
+                onClick={() => setShowItensResumoModal(true)}
+              >
+                <RiEyeLine />
+              </button>
+            </div>
             
             <div className="add-item-row">
               <div style={{ flex: 1 }}>
                 <Select
                   options={itemOptions}
                   styles={customSelectStyles}
-                  placeholder="Buscar produto ou serviço..."
+                  placeholder="Produto/Serviço"
                   value={itemOptions.flatMap(g => g.options).find(o => o.value === addItem.temp_id) || null}
                   onChange={sel => setAddItem(a => ({ ...a, temp_id: sel ? sel.value : '' }))}
                   isClearable
@@ -866,20 +972,163 @@ export default function OrdemServicoForm() {
                   noOptionsMessage={() => "Nenhum item encontrado"}
                 />
               </div>
-              <input
-                className="form-control"
-                type="number" min="1" step="1" placeholder="Qtd"
-                style={{ width: 70, padding: '8px 12px', fontSize: 13, height: 'auto' }}
-                value={addItem.quantidade}
-                onChange={e => setAddItem(a => ({ ...a, quantidade: e.target.value }))}
-                disabled={isLocked}
-              />
-              <button className="btn btn-success btn-icon" style={{ width: 38, height: 38 }} title="Adicionar Item" onClick={adicionarItemGenerico} disabled={isLocked}><RiAddLine size={20} /></button>
+              <button className="btn btn-success btn-icon" style={{ width: 38, height: 38 }} title="Adicionar Item" onClick={openQtyModal} disabled={isLocked}><RiAddLine size={20} /></button>
             </div>
 
             {itensProdutos.length > 0 || itensServicos.length > 0 ? (
-              <div className="table-wrapper" style={{ marginTop: 20 }}>
-                <table>
+              <>
+                <div className="os-items-mobile-list" style={{ marginTop: 20 }}>
+                  <div className="os-mobile-grid-header">
+                    <div className="os-mobile-grid-cell os-mobile-grid-name">Item</div>
+                    <div className="os-mobile-grid-cell os-mobile-grid-num">Qtd</div>
+                    <div className="os-mobile-grid-cell os-mobile-grid-num">Preço</div>
+                    <div className="os-mobile-grid-cell os-mobile-grid-num">Total</div>
+                  </div>
+
+                  {itensProdutos.map(i => {
+                    const key = i.id || i._tempId
+                    const itemKey = `prod-${key}`
+                    const expanded = expandedItemKey === itemKey
+                    return (
+                      <div key={itemKey} className={`os-mobile-grid-item ${expanded ? 'expanded' : ''}`}>
+                        <button
+                          type="button"
+                          className="os-mobile-grid-row"
+                          onClick={() => setExpandedItemKey(prev => (prev === itemKey ? null : itemKey))}
+                        >
+                          <div className="os-mobile-grid-cell os-mobile-grid-name" title={i.produtos?.nome || ''}>
+                            {i.produtos?.nome}
+                          </div>
+                          <div className="os-mobile-grid-cell os-mobile-grid-num">{Number(i.quantidade || 0)}</div>
+                          <div className="os-mobile-grid-cell os-mobile-grid-num">{fmt(i.preco_unitario)}</div>
+                          <div className="os-mobile-grid-cell os-mobile-grid-num fw-600 text-red">{fmt(i.quantidade * i.preco_unitario)}</div>
+                        </button>
+
+                        {expanded && (
+                          <div className="os-mobile-grid-edit" onClick={e => e.stopPropagation()}>
+                            <div className="os-mobile-grid-edit-row">
+                              <div className="os-mobile-edit-field">
+                                <div className="os-mobile-edit-label">Quantidade</div>
+                                <div className="os-item-qty">
+                                  <input
+                                    type="number"
+                                    min="1"
+                                    step="1"
+                                    className="form-control table-input"
+                                    value={i.quantidade}
+                                    onChange={e => updateProduto(key, 'quantidade', e.target.value)}
+                                    disabled={isLocked}
+                                  />
+                                  <span className="os-item-unit">{i.produtos?.unidade}</span>
+                                </div>
+                              </div>
+
+                              <div className="os-mobile-edit-field">
+                                <div className="os-mobile-edit-label">Preço</div>
+                                <input
+                                  type="number"
+                                  step="0.01"
+                                  className="form-control table-input"
+                                  value={i.preco_unitario}
+                                  onChange={e => updateProduto(key, 'preco_unitario', e.target.value)}
+                                  disabled={isLocked}
+                                />
+                              </div>
+                            </div>
+
+                            <div className="os-mobile-grid-edit-actions">
+                              <button
+                                type="button"
+                                className="btn btn-danger btn-icon"
+                                onClick={() => removerProduto(key)}
+                                title="Remover"
+                                disabled={isLocked}
+                              >
+                                <RiDeleteBinLine />
+                              </button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )
+                  })}
+
+                  {itensServicos.map(i => {
+                    const key = i.id || i._tempId
+                    const itemKey = `serv-${key}`
+                    const expanded = expandedItemKey === itemKey
+                    return (
+                      <div key={itemKey} className={`os-mobile-grid-item ${expanded ? 'expanded' : ''}`}>
+                        <button
+                          type="button"
+                          className="os-mobile-grid-row"
+                          onClick={() => setExpandedItemKey(prev => (prev === itemKey ? null : itemKey))}
+                        >
+                          <div className="os-mobile-grid-cell os-mobile-grid-name" title={i.servicos?.nome || ''}>
+                            {i.servicos?.nome}
+                          </div>
+                          <div className="os-mobile-grid-cell os-mobile-grid-num">{Number(i.quantidade || 0)}</div>
+                          <div className="os-mobile-grid-cell os-mobile-grid-num">{fmt(i.preco_unitario)}</div>
+                          <div className="os-mobile-grid-cell os-mobile-grid-num fw-600 text-red">{fmt(i.quantidade * i.preco_unitario)}</div>
+                        </button>
+
+                        {expanded && (
+                          <div className="os-mobile-grid-edit" onClick={e => e.stopPropagation()}>
+                            <div className="os-mobile-grid-edit-row">
+                              <div className="os-mobile-edit-field">
+                                <div className="os-mobile-edit-label">Quantidade</div>
+                                <input
+                                  type="number"
+                                  min="1"
+                                  step="1"
+                                  className="form-control table-input"
+                                  value={i.quantidade}
+                                  onChange={e => updateServico(key, 'quantidade', e.target.value)}
+                                  disabled={isLocked}
+                                />
+                              </div>
+
+                              <div className="os-mobile-edit-field">
+                                <div className="os-mobile-edit-label">Preço</div>
+                                <input
+                                  type="number"
+                                  step="0.01"
+                                  className="form-control table-input"
+                                  value={i.preco_unitario}
+                                  onChange={e => updateServico(key, 'preco_unitario', e.target.value)}
+                                  disabled={isLocked}
+                                />
+                              </div>
+                            </div>
+
+                            <div className="os-mobile-grid-edit-actions">
+                              <button
+                                type="button"
+                                className="btn btn-danger btn-icon"
+                                onClick={() => removerServico(key)}
+                                title="Remover"
+                                disabled={isLocked}
+                              >
+                                <RiDeleteBinLine />
+                              </button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )
+                  })}
+                </div>
+
+                <div className="table-wrapper os-items-table-wrapper" style={{ marginTop: 20 }}>
+                  <table className="os-items-table">
+                    <colgroup>
+                      <col style={{ width: 92 }} />
+                      <col />
+                      <col style={{ width: 120 }} />
+                      <col style={{ width: 120 }} />
+                      <col style={{ width: 120 }} />
+                      <col style={{ width: 56 }} />
+                    </colgroup>
                   <thead>
                     <tr>
                       <th>Tipo</th>
@@ -896,8 +1145,8 @@ export default function OrdemServicoForm() {
                       const key = i.id || i._tempId
                       return (
                         <tr key={key}>
-                          <td><span className="badge badge-warning" style={{ background: 'transparent', border: '1px solid var(--warning)', color: 'var(--warning)', padding: '2px 6px', fontSize: 11 }}>PRODUTO</span></td>
-                          <td className="fw-600">{i.produtos?.nome}</td>
+                          <td><span className="badge badge-warning os-item-badge">PRODUTO</span></td>
+                          <td className="fw-600 os-item-name" title={i.produtos?.nome || ''}>{i.produtos?.nome}</td>
                           <td>
                             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                               <input 
@@ -933,8 +1182,8 @@ export default function OrdemServicoForm() {
                       const key = i.id || i._tempId
                       return (
                         <tr key={key}>
-                          <td><span className="badge badge-info" style={{ background: 'transparent', border: '1px solid var(--info)', color: 'var(--info)', padding: '2px 6px', fontSize: 11 }}>SERVIÇO</span></td>
-                          <td className="fw-600">{i.servicos?.nome}</td>
+                          <td><span className="badge badge-info os-item-badge">SERVIÇO</span></td>
+                          <td className="fw-600 os-item-name" title={i.servicos?.nome || ''}>{i.servicos?.nome}</td>
                           <td>
                             <input 
                               type="number" 
@@ -962,8 +1211,9 @@ export default function OrdemServicoForm() {
                       )
                     })}
                   </tbody>
-                </table>
-              </div>
+                  </table>
+                </div>
+              </>
             ) : (
               <div className="empty-state" style={{ padding: '32px 0', fontSize: 13 }}>
                 <p>Nenhum item adicionado à Ordem de Serviço</p>
@@ -1001,72 +1251,14 @@ export default function OrdemServicoForm() {
 
         {/* Right - Totals */}
         <div className="os-col-side">
-          <div className="card totals-card">
-            <h3 className="section-title">Resumo</h3>
-            <div className="total-row">
-              <span>Produtos</span>
-              <span>{fmt(totalProdutos)}</span>
-            </div>
-
-
-            <div className="total-row">
-              <span>Serviços</span>
-              <span>{fmt(totalServicos)}</span>
-            </div>
-            <div className="total-divider" />
-            <div className="total-row total-grand">
-              <span>Total</span>
-              <span className="text-red">{fmt(total)}</span>
-            </div>
-
-            <div style={{ marginTop: 24, display: 'flex', flexDirection: 'column', gap: 10 }}>
+          <div className="card">
+            <h3 className="section-title">Ações</h3>
+            <div style={{ marginTop: 12, display: 'flex', flexDirection: 'column', gap: 10 }}>
               {isOrcamento && !isNew && (
-                <button className="btn btn-success" style={{ width: '100%', justifyContent: 'center' }} onClick={() => handleSave('aprovado')} disabled={saving}>
-                  <RiCheckboxCircleLine /> Aprovar/Confirmar Orçamento
+                <button className="btn btn-info" style={{ width: '100%', justifyContent: 'center' }} onClick={() => handleSave('aprovado')} disabled={saving || isLocked}>
+                  <RiCheckboxCircleLine /> Orçamento
                 </button>
               )}
-              {form.status === 'concluido' && (
-                <button 
-                  className="btn btn-success" 
-                  style={{ width: '100%', justifyContent: 'center', background: 'var(--success)', borderColor: 'var(--success)' }}
-                  onClick={() => setShowPayModal(true)}
-                  disabled={saving || isLocked}
-                >
-                  <RiMoneyDollarCircleLine /> Pagar e Finalizar
-                </button>
-              )}
-            </div>
-          </div>
-
-          <div className="card" style={{ marginTop: 24 }}>
-            <h3 className="section-title">Gerar Orçamento</h3>
-            <button 
-              className="btn btn-primary" 
-              style={{ 
-                width: '100%', justifyContent: 'center', background: '#25D366', borderColor: '#25D366', fontWeight: 600, marginTop: 12, color: 'white',
-                opacity: (itensProdutos.length === 0 && itensServicos.length === 0) ? 0.4 : 1 
-              }}
-              onClick={handleGerarOrcamentoWhatsapp}
-              disabled={itensProdutos.length === 0 && itensServicos.length === 0}
-            >
-              <RiWhatsappLine size={20} style={{ marginRight: 6 }} /> Enviar por WhatsApp
-            </button>
-          </div>
-
-          <div className="card" style={{ marginTop: 24 }}>
-            <h3 className="section-title">Status</h3>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 12 }}>
-              {Object.entries(STATUS_LABELS).map(([v, l]) => (
-                <button
-                  key={v}
-                  className={`status-btn ${form.status === v ? 'active' : ''}`}
-                  onClick={() => handleSelectStatus(v)}
-                  disabled={isLocked}
-                >
-                  <span className={`status-dot status-${v}`}></span>
-                  {l}
-                </button>
-              ))}
             </div>
           </div>
         </div>
@@ -1110,6 +1302,186 @@ export default function OrdemServicoForm() {
                  {saving ? 'Registrando...' : 'Confirmar e Lançar'}
                </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {showStatusModal && (
+        <div className="modal-overlay" onClick={() => setShowStatusModal(false)}>
+          <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 420 }}>
+            <div className="modal-header">
+              <h3>Status da OS</h3>
+              <button className="btn btn-secondary btn-icon" onClick={() => setShowStatusModal(false)}>×</button>
+            </div>
+            <div className="modal-body">
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {Object.entries(STATUS_LABELS).map(([v, l]) => (
+                  <button
+                    key={v}
+                    className={`status-btn ${form.status === v ? 'active' : ''}`}
+                    onClick={async () => {
+                      await handleSelectStatus(v)
+                      setShowStatusModal(false)
+                    }}
+                    disabled={isLocked}
+                  >
+                    <span className={`status-dot status-${v}`}></span>
+                    {l}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="modal-footer">
+              <button className="btn btn-secondary" onClick={() => setShowStatusModal(false)}>Fechar</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showProblemaModal && (
+        <div className="modal-overlay" onClick={() => setShowProblemaModal(false)}>
+          <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 560 }}>
+            <div className="modal-header">
+              <h3>Defeito / Problema Reclamado</h3>
+              <button className="btn btn-secondary btn-icon" onClick={() => setShowProblemaModal(false)}>×</button>
+            </div>
+            <div className="modal-body">
+              <textarea
+                className="form-control"
+                rows={8}
+                value={form.problema_reclamado}
+                onChange={e => setForm(f => ({ ...f, problema_reclamado: e.target.value }))}
+                disabled={isLocked}
+                autoFocus
+              />
+            </div>
+            <div className="modal-footer">
+              <button className="btn btn-secondary" onClick={() => setShowProblemaModal(false)}>Fechar</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showItensResumoModal && (
+        <div className="modal-overlay" onClick={() => setShowItensResumoModal(false)}>
+          <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 720 }}>
+            <div className="modal-header">
+              <h3>Resumo de Itens</h3>
+              <button className="btn btn-secondary btn-icon" onClick={() => setShowItensResumoModal(false)}>×</button>
+            </div>
+            <div className="modal-body">
+              <div className="os-resumo-grid">
+                <div className="os-resumo-kpi">
+                  <span>Produtos</span>
+                  <strong>{fmt(totalProdutos)}</strong>
+                  <em>{itensProdutos.length} item(ns) • {totalQtdProdutos} un.</em>
+                </div>
+                <div className="os-resumo-kpi">
+                  <span>Serviços</span>
+                  <strong>{fmt(totalServicos)}</strong>
+                  <em>{itensServicos.length} item(ns) • {totalQtdServicos} un.</em>
+                </div>
+                <div className="os-resumo-kpi total">
+                  <span>Total</span>
+                  <strong>{fmt(total)}</strong>
+                  <em>Desconto: —</em>
+                </div>
+              </div>
+
+              <div className="os-resumo-section">
+                <h4>Produtos</h4>
+                {itensProdutos.length === 0 ? (
+                  <div className="empty-state" style={{ padding: '14px 0', fontSize: 13 }}>
+                    <p>Nenhum produto</p>
+                  </div>
+                ) : (
+                  <div className="os-resumo-list">
+                    {itensProdutos.map((i, idx) => (
+                      <div key={(i.id || i._tempId) ?? idx} className="os-resumo-row">
+                        <div className="os-resumo-main">
+                          <div className="os-resumo-title" title={i.produtos?.nome || ''}>{i.produtos?.nome || '—'}</div>
+                          <div className="os-resumo-sub">
+                            Qtd: <strong>{Number(i.quantidade || 0)}</strong>{i.produtos?.unidade ? ` ${i.produtos.unidade}` : ''} • Unit.: <strong>{fmt(i.preco_unitario)}</strong>
+                          </div>
+                        </div>
+                        <div className="os-resumo-right">
+                          <div className="os-resumo-total">{fmt(Number(i.quantidade || 0) * Number(i.preco_unitario || 0))}</div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <div className="os-resumo-section" style={{ marginTop: 16 }}>
+                <h4>Serviços</h4>
+                {itensServicos.length === 0 ? (
+                  <div className="empty-state" style={{ padding: '14px 0', fontSize: 13 }}>
+                    <p>Nenhum serviço</p>
+                  </div>
+                ) : (
+                  <div className="os-resumo-list">
+                    {itensServicos.map((i, idx) => (
+                      <div key={(i.id || i._tempId) ?? idx} className="os-resumo-row">
+                        <div className="os-resumo-main">
+                          <div className="os-resumo-title" title={i.servicos?.nome || ''}>{i.servicos?.nome || '—'}</div>
+                          <div className="os-resumo-sub">
+                            Qtd: <strong>{Number(i.quantidade || 0)}</strong> • Unit.: <strong>{fmt(i.preco_unitario)}</strong>
+                          </div>
+                        </div>
+                        <div className="os-resumo-right">
+                          <div className="os-resumo-total">{fmt(Number(i.quantidade || 0) * Number(i.preco_unitario || 0))}</div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+            <div className="modal-footer">
+              <button className="btn btn-secondary" onClick={() => setShowItensResumoModal(false)}>Fechar</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {qtyModal.open && (
+        <div className="modal-overlay" onClick={() => setQtyModal(m => ({ ...m, open: false }))}>
+          <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 420 }}>
+            <div className="modal-header">
+              <h3>Quantidade</h3>
+              <button className="btn btn-secondary btn-icon" onClick={() => setQtyModal(m => ({ ...m, open: false }))}>×</button>
+            </div>
+            <form
+              onSubmit={(e) => {
+                e.preventDefault()
+                adicionarItemComQuantidade(qtyModal.temp_id, qtyModal.quantidade)
+              }}
+            >
+              <div className="modal-body">
+                <p style={{ fontSize: 13, color: 'var(--gray-light)', marginBottom: 14, background: 'var(--dark-3)', padding: 10, borderRadius: 8, border: '1px solid var(--white-border)' }}>
+                  Item: <strong style={{ color: 'var(--white)' }}>{getItemNameFromTempId(qtyModal.temp_id) || '—'}</strong>
+                </p>
+                <div className="form-group">
+                  <label>Quantidade</label>
+                  <input
+                    type="number"
+                    min="1"
+                    step="1"
+                    required
+                    className="form-control"
+                    value={qtyModal.quantidade}
+                    onChange={e => setQtyModal(m => ({ ...m, quantidade: e.target.value }))}
+                    disabled={isLocked}
+                    autoFocus
+                  />
+                </div>
+              </div>
+              <div className="modal-footer" style={{ display: 'flex', justifyContent: 'flex-end', gap: 12 }}>
+                <button type="button" className="btn btn-secondary" onClick={() => setQtyModal(m => ({ ...m, open: false }))}>Cancelar</button>
+                <button type="submit" className="btn btn-success" disabled={isLocked}>Adicionar</button>
+              </div>
+            </form>
           </div>
         </div>
       )}

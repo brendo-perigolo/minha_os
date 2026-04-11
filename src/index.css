@@ -121,12 +121,22 @@ a {
 
 .btn-success {
   background: var(--success);
-  color: var(--white);
+  color: var(--on-accent);
 }
 .btn-success:hover {
   background: #16a34a;
   transform: translateY(-1px);
   box-shadow: 0 4px 16px rgba(34,197,94,0.4);
+}
+
+.btn-info {
+  background: var(--info);
+  color: var(--on-accent);
+}
+
+.btn-info:hover {
+  transform: translateY(-1px);
+  filter: brightness(0.95);
 }
 
 .btn-danger {
