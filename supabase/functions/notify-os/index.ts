@@ -81,10 +81,32 @@ serve(async (req) => {
       const numero = payload?.numero ? String(payload.numero) : String(osId ?? '').padStart(4, '0')
       const cliente = payload?.cliente ? String(payload.cliente) : '—'
       const endereco = payload?.endereco ? String(payload.endereco) : '—'
+      const equipamento = payload?.equipamento ? String(payload.equipamento) : ''
+      const defeito = payload?.defeito ? String(payload.defeito) : ''
+      const total = payload?.total != null ? Number(payload.total) : null
       const url = payload?.url ? String(payload.url) : `/ordens/${osId}`
 
       const title = `Nova OS #${numero}`
-      const body = `Cliente: ${cliente} | Endereço: ${endereco}`
+
+      const parts: string[] = []
+      if (cliente && cliente !== '—') parts.push(`Cliente: ${cliente}`)
+      if (equipamento) parts.push(`Equip.: ${equipamento}`)
+      if (endereco && endereco !== '—') parts.push(`End.: ${endereco}`)
+      if (defeito) {
+        const cleaned = defeito.replace(/\s+/g, ' ').trim()
+        parts.push(`Defeito: ${cleaned.length > 90 ? cleaned.slice(0, 90) + '…' : cleaned}`)
+      }
+      if (Number.isFinite(total as number) && (total as number) >= 0) {
+        const fmt = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(total as number)
+        parts.push(`Total: ${fmt}`)
+      }
+
+      const body = parts.length > 0 ? parts.join('\n') : 'Toque para abrir'
+
+      // Assets servidos pelo app (PWA)
+      const icon = '/brand/mark.svg'
+      // Android: badge deve ser monocromático (evita o "quadrado branco" no topo)
+      const badge = '/brand/badge-e.svg'
 
       const { data: subs, error: subsErr } = await supabase
         .from('push_subscriptions')
@@ -112,7 +134,16 @@ serve(async (req) => {
               title,
               body,
               url,
+              icon,
+              badge,
               tag: `os-${numero}`,
+              data: {
+                osId,
+                numero,
+                cliente,
+                equipamento: equipamento || null,
+                endereco,
+              }
             }),
             options: {
               ttl: 60 * 60, // 1h

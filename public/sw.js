@@ -21,14 +21,20 @@ self.addEventListener('push', (event) => {
   const title = payload?.title || 'ELETROCED'
   const body = payload?.body || ''
   const url = payload?.url || '/'
+  const icon = payload?.icon || '/brand/mark.svg'
+  const badge = payload?.badge || '/brand/badge-e.svg'
+  const image = payload?.image
+  const tag = payload?.tag || 'eletroced'
+  const data = payload?.data && typeof payload.data === 'object' ? payload.data : {}
 
   event.waitUntil(
     self.registration.showNotification(title, {
       body,
-      tag: payload?.tag || 'eletroced',
-      data: { url },
-      icon: '/favicon.svg',
-      badge: '/favicon.svg',
+      tag,
+      data: { url, ...data },
+      icon,
+      badge,
+      ...(image ? { image } : {}),
     })
   )
 })

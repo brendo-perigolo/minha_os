@@ -650,6 +650,11 @@ export default function OrdemServicoForm() {
               .eq('id', Number(form.cliente_id))
               .single()
 
+            const eqp = equipamentos.find(e => Number(e.id) === Number(form.equipamento_id))
+            const equipamentoLabel = eqp
+              ? `${eqp.modelo || ''}${eqp.marca ? ` - ${eqp.marca}` : ''}${eqp.voltagem ? ` [${eqp.voltagem}]` : ''}`.trim()
+              : ''
+
             const { data: fnData, error: fnErr } = await supabase.functions.invoke('notify-os', {
               body: {
                 action: 'push_os_opened',
@@ -657,6 +662,9 @@ export default function OrdemServicoForm() {
                 numero: String(osId).padStart(4, '0'),
                 cliente: cli?.nome || null,
                 endereco: cli?.endereco || null,
+                equipamento: equipamentoLabel || null,
+                defeito: form.problema_reclamado || null,
+                total,
                 url: `/ordens/${osId}`,
               }
             })
