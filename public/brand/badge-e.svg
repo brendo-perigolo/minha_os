@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128" role="img" aria-label="E">
+  <rect x="0" y="0" width="128" height="128" fill="#ffffff"/>
   <g transform="translate(0,2)">
-    <text x="64" y="86" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-weight="900" font-size="86" fill="#ffffff">E</text>
+    <text x="64" y="90" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-weight="900" font-size="92" fill="#000000">E</text>
   </g>
 </svg>
