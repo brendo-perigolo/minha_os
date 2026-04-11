@@ -132,7 +132,6 @@ export default function OrdemServico() {
   return (
     <div>
       <div className="page-header">
-        <h2>Ordens de Serviço</h2>
         <div className="page-tools os-tools">
           <div className="os-tools-top">
             <select className="form-control" value={filterStatus} onChange={e => setFilterStatus(e.target.value)}>
@@ -180,14 +179,14 @@ export default function OrdemServico() {
                   </div>
 
                   <div className="os-card-actions">
-                    <button className="btn btn-secondary" title="Ver/Editar" onClick={() => navigate(`/ordens/${o.id}`)}>
-                      <RiEyeLine /> Ver
+                    <button className="btn btn-secondary btn-icon" title="Ver/Editar" onClick={() => navigate(`/ordens/${o.id}`)}>
+                      <RiEyeLine />
                     </button>
-                    <button className="btn btn-secondary" title="Reimprimir" onClick={() => openPrint(o)}>
-                      <RiPrinterLine /> PDF
+                    <button className="btn btn-secondary btn-icon" title="Reimprimir" onClick={() => openPrint(o)}>
+                      <RiPrinterLine />
                     </button>
-                    <button className="btn btn-danger" title="Excluir" onClick={() => setDeleteModal(o)}>
-                      <RiDeleteBinLine /> Excluir
+                    <button className="btn btn-danger btn-icon" title="Excluir" onClick={() => setDeleteModal(o)}>
+                      <RiDeleteBinLine />
                     </button>
                   </div>
                 </div>

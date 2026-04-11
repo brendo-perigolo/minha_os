@@ -132,6 +132,8 @@ export default function Layout({ children }) {
     return location.pathname.startsWith(n.to)
   })?.label || 'ELETROCED'
 
+  const headerTitle = pageTitle === 'Ordens de Serviço' ? 'O.S Serviço' : pageTitle
+
   return (
     <div className="layout">
       {/* Overlay mobile */}
@@ -210,7 +212,7 @@ export default function Layout({ children }) {
               <img className="mobile-brand-icon" src="/brand/mark.svg" alt="" />
               <span className="mobile-brand-name">ELETROCED</span>
             </NavLink>
-            <h1 className="header-title">{pageTitle}</h1>
+            <h1 className="header-title">{headerTitle}</h1>
           </div>
           <div className="header-right">
             <button

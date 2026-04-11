@@ -35,10 +35,10 @@
   background: var(--dark-2);
   border: 1px solid var(--white-border);
   border-radius: var(--radius-lg);
-  padding: 14px;
+  padding: 12px;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
 }
 
 .os-card-top {
@@ -52,6 +52,7 @@
   font-weight: 900;
   letter-spacing: 0.02em;
   white-space: nowrap;
+  font-size: 13px;
 }
 
 .os-card-client {
@@ -74,10 +75,11 @@
 .os-card-actions {
   display: flex;
   gap: 8px;
+  justify-content: flex-end;
 }
 
 .os-card-actions .btn {
-  flex: 1;
+  flex: 0;
   justify-content: center;
 }
 
