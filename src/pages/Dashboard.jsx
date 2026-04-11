@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import './Dashboard.css'
 import { useAuth } from '../contexts/AuthContext'
+import pkg from '../../package.json'
 
 const statusLabel = {
   aberto: 'Aberto',
@@ -128,12 +129,16 @@ export default function Dashboard() {
   ]
 
   const loggedUserLabel = userProfile?.nome || session?.user?.email || 'Usuário'
+  const appVersion = pkg?.version || ''
 
   return (
     <div className="dashboard">
       <div className="dash-welcome dash-welcome-app">
         <div className="dash-welcome-text">
-          <h2 className="dash-user-title">{loggedUserLabel}</h2>
+          <div className="dash-topline">
+            <h2 className="dash-user-title">{loggedUserLabel}</h2>
+            {appVersion ? <span className="dash-version">v{appVersion}</span> : null}
+          </div>
         </div>
       </div>
 

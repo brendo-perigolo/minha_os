@@ -21,15 +21,33 @@ const customSelectStyles = {
     '&:hover': {
       borderColor: 'var(--red)'
     },
-    minHeight: '38px',
+    minHeight: '34px',
+    fontSize: '13px',
     borderRadius: '8px'
   }),
+  valueContainer: (base) => ({
+    ...base,
+    padding: '0 10px'
+  }),
+  dropdownIndicator: (base) => ({
+    ...base,
+    padding: 6
+  }),
+  clearIndicator: (base) => ({
+    ...base,
+    padding: 6
+  }),
+  indicatorSeparator: () => ({ display: 'none' }),
   menu: (base) => ({
     ...base,
     background: 'var(--dark-2)',
     zIndex: 99,
     border: '1px solid var(--white-border)',
     borderRadius: '8px'
+  }),
+  menuPortal: (base) => ({
+    ...base,
+    zIndex: 9999
   }),
   option: (base, state) => ({
     ...base,
@@ -103,6 +121,7 @@ export default function OrdemServicoForm() {
   const [showStatusModal, setShowStatusModal] = useState(false)
   const [showProblemaModal, setShowProblemaModal] = useState(false)
   const [showItensResumoModal, setShowItensResumoModal] = useState(false)
+  const [showCliEqpInfoModal, setShowCliEqpInfoModal] = useState(false)
 
   const [qtyModal, setQtyModal] = useState({ open: false, temp_id: '', quantidade: 1 })
 
@@ -129,6 +148,53 @@ export default function OrdemServicoForm() {
   const [addItem, setAddItem] = useState({ temp_id: '' })
 
   const [expandedItemKey, setExpandedItemKey] = useState(null)
+
+  const clienteFieldRef = useRef(null)
+  const equipamentoFieldRef = useRef(null)
+  const itemFieldRef = useRef(null)
+
+  const menuPortalTarget = typeof document !== 'undefined' ? document.body : null
+
+  const scrollFieldIntoView = useCallback((ref) => {
+    const el = ref?.current
+    if (!el) return
+    // pequeno delay para deixar o teclado abrir antes de calcular
+    setTimeout(() => {
+      try {
+        el.scrollIntoView({ block: 'center', behavior: 'smooth' })
+      } catch {
+        el.scrollIntoView(true)
+      }
+    }, 60)
+  }, [])
+
+  useEffect(() => {
+    const vv = window.visualViewport
+    if (!vv) return
+
+    const updateKeyboardOffset = () => {
+      const overlap = Math.max(0, window.innerHeight - vv.height - (vv.offsetTop || 0))
+      document.documentElement.style.setProperty('--keyboard-offset', `${Math.round(overlap)}px`)
+    }
+
+    updateKeyboardOffset()
+    vv.addEventListener('resize', updateKeyboardOffset)
+    vv.addEventListener('scroll', updateKeyboardOffset)
+
+    const onFocusIn = () => updateKeyboardOffset()
+    const onFocusOut = () => setTimeout(updateKeyboardOffset, 100)
+
+    window.addEventListener('focusin', onFocusIn)
+    window.addEventListener('focusout', onFocusOut)
+
+    return () => {
+      vv.removeEventListener('resize', updateKeyboardOffset)
+      vv.removeEventListener('scroll', updateKeyboardOffset)
+      window.removeEventListener('focusin', onFocusIn)
+      window.removeEventListener('focusout', onFocusOut)
+      document.documentElement.style.setProperty('--keyboard-offset', `0px`)
+    }
+  }, [])
 
   useEffect(() => { fetchInit() }, [])
 
@@ -187,8 +253,15 @@ export default function OrdemServicoForm() {
 
   const isLocked = !isNew && estoqueBaixado === true
 
-  const problemaText = String(form.problema_reclamado || '')
-  const isProblemaLongo = (problemaText.trim().length > 120) || problemaText.includes('\n')
+  const selectedCliente = useMemo(
+    () => clientes.find(c => Number(c.id) === Number(form.cliente_id)) || null,
+    [clientes, form.cliente_id]
+  )
+
+  const selectedEquipamento = useMemo(
+    () => equipamentos.find(e => Number(e.id) === Number(form.equipamento_id)) || null,
+    [equipamentos, form.equipamento_id]
+  )
 
   const origQtyByProduto = useMemo(() => {
     const map = {}
@@ -862,10 +935,10 @@ export default function OrdemServicoForm() {
           <div className="card">
             <h3 className="section-title">Informações da OS</h3>
             <div className="form-row" style={{ marginTop: 16 }}>
-              <div className="form-group" style={{ flex: 1, minWidth: 250 }}>
+              <div className="form-group" style={{ flex: 1, minWidth: 220 }}>
                 <label>Cliente <span style={{ color: 'var(--red)', fontWeight: 'bold' }}>*</span></label>
-                <div style={{ display: 'flex', gap: 8 }}>
-                  <div style={{ flex: 1 }}>
+                <div className="os-compact-field-row">
+                  <div ref={clienteFieldRef} style={{ flex: 1 }} onFocusCapture={() => scrollFieldIntoView(clienteFieldRef)}>
                     <Select
                       options={clienteOptions}
                       styles={customSelectStyles}
@@ -875,12 +948,23 @@ export default function OrdemServicoForm() {
                       isClearable
                       isDisabled={isLocked}
                       noOptionsMessage={() => "Nenhum cliente"}
+                      menuPortalTarget={menuPortalTarget}
+                      menuPosition="fixed"
+                      onMenuOpen={() => scrollFieldIntoView(clienteFieldRef)}
                     />
                   </div>
+                  <button
+                    type="button"
+                    className="btn btn-secondary btn-icon os-btn-compact"
+                    onClick={() => setShowCliEqpInfoModal(true)}
+                    title="Ver dados completos"
+                    disabled={!form.cliente_id}
+                  >
+                    <RiEyeLine />
+                  </button>
                   <button 
                     type="button" 
-                    className="btn btn-primary btn-icon" 
-                    style={{ width: 38, height: 38 }}
+                    className="btn btn-primary btn-icon os-btn-compact" 
                     onClick={() => setShowClienteModal(true)} 
                     title="Cadastrar Novo Cliente"
                     disabled={isLocked}
@@ -890,10 +974,10 @@ export default function OrdemServicoForm() {
                 </div>
               </div>
 
-              <div className="form-group" style={{ flex: 1, minWidth: 250 }}>
+              <div className="form-group" style={{ flex: 1, minWidth: 220 }}>
                 <label>Equipamento (Requer Cliente)</label>
-                <div style={{ display: 'flex', gap: 8 }}>
-                  <div style={{ flex: 1 }}>
+                <div className="os-compact-field-row">
+                  <div ref={equipamentoFieldRef} style={{ flex: 1 }} onFocusCapture={() => scrollFieldIntoView(equipamentoFieldRef)}>
                     <Select
                       options={equipamentos.map(e => ({ value: e.id, label: `${e.modelo} ${e.marca ? `- ${e.marca}` : ''} ${e.voltagem ? `[${e.voltagem}]` : ''}` }))}
                       styles={customSelectStyles}
@@ -903,12 +987,23 @@ export default function OrdemServicoForm() {
                       isClearable
                       isDisabled={!form.cliente_id || isLocked}
                       noOptionsMessage={() => "Nenhum equipamento cadastrado"}
+                      menuPortalTarget={menuPortalTarget}
+                      menuPosition="fixed"
+                      onMenuOpen={() => scrollFieldIntoView(equipamentoFieldRef)}
                     />
                   </div>
+                  <button
+                    type="button"
+                    className="btn btn-secondary btn-icon os-btn-compact"
+                    onClick={() => setShowCliEqpInfoModal(true)}
+                    title="Ver dados completos"
+                    disabled={!form.cliente_id}
+                  >
+                    <RiEyeLine />
+                  </button>
                   <button 
                     type="button" 
-                    className="btn btn-primary btn-icon" 
-                    style={{ width: 38, height: 38 }}
+                    className="btn btn-primary btn-icon os-btn-compact" 
                     disabled={!form.cliente_id || isLocked} 
                     onClick={() => setShowEqpModal(true)} 
                     title="Cadastrar Novo Equipamento"
@@ -918,31 +1013,30 @@ export default function OrdemServicoForm() {
                 </div>
               </div>
             </div>
+          </div>
 
-            <div className="form-group problem-highlight" style={{ marginTop: 16 }}>
-              <label>Defeito / Problema Reclamado</label>
-               {isProblemaLongo ? (
-                 <button
-                   type="button"
-                   className="problem-preview"
-                   onClick={() => setShowProblemaModal(true)}
-                   disabled={isLocked}
-                   title="Toque para ver completo"
-                 >
-                   <div className="problem-preview-text">{problemaText}</div>
-                   <div className="problem-preview-hint">Toque para ver completo</div>
-                 </button>
-               ) : (
-                 <textarea
-                   className="form-control"
-                   placeholder="Descreva o problema relatado pelo cliente (Ex: Não liga, tela quebrada...)"
-                   rows={2}
-                   value={form.problema_reclamado}
-                   onChange={e => setForm(f => ({ ...f, problema_reclamado: e.target.value }))}
-                   disabled={isLocked}
-                 />
-               )}
+          <div className="card os-problema-card">
+            <div className="os-card-header-row">
+              <h3 className="section-title" style={{ margin: 0 }}>Defeito / Problema Reclamado</h3>
+              <button
+                type="button"
+                className="btn btn-secondary btn-icon os-btn-compact"
+                title="Ver tudo"
+                onClick={() => setShowProblemaModal(true)}
+                disabled={isLocked}
+              >
+                <RiEyeLine />
+              </button>
             </div>
+            <textarea
+              className="form-control os-textarea-compact"
+              placeholder="Descreva o problema relatado pelo cliente (Ex: Não liga, tela quebrada...)"
+              rows={2}
+              value={form.problema_reclamado}
+              onChange={e => setForm(f => ({ ...f, problema_reclamado: e.target.value }))}
+              disabled={isLocked}
+              style={{ marginTop: 12 }}
+            />
           </div>
 
           {/* Produtos e Serviços Unificados */}
@@ -960,7 +1054,7 @@ export default function OrdemServicoForm() {
             </div>
             
             <div className="add-item-row">
-              <div style={{ flex: 1 }}>
+              <div ref={itemFieldRef} style={{ flex: 1 }} onFocusCapture={() => scrollFieldIntoView(itemFieldRef)}>
                 <Select
                   options={itemOptions}
                   styles={customSelectStyles}
@@ -970,9 +1064,12 @@ export default function OrdemServicoForm() {
                   isClearable
                   isDisabled={isLocked}
                   noOptionsMessage={() => "Nenhum item encontrado"}
+                  menuPortalTarget={menuPortalTarget}
+                  menuPosition="fixed"
+                  onMenuOpen={() => scrollFieldIntoView(itemFieldRef)}
                 />
               </div>
-              <button className="btn btn-success btn-icon" style={{ width: 38, height: 38 }} title="Adicionar Item" onClick={openQtyModal} disabled={isLocked}><RiAddLine size={20} /></button>
+              <button className="btn btn-success btn-icon os-btn-compact" title="Adicionar Item" onClick={openQtyModal} disabled={isLocked}><RiAddLine size={18} /></button>
             </div>
 
             {itensProdutos.length > 0 || itensServicos.length > 0 ? (
@@ -1357,6 +1454,40 @@ export default function OrdemServicoForm() {
             </div>
             <div className="modal-footer">
               <button className="btn btn-secondary" onClick={() => setShowProblemaModal(false)}>Fechar</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showCliEqpInfoModal && (
+        <div className="modal-overlay" onClick={() => setShowCliEqpInfoModal(false)}>
+          <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 560 }}>
+            <div className="modal-header">
+              <h3>Dados do Cliente e Equipamento</h3>
+              <button className="btn btn-secondary btn-icon" onClick={() => setShowCliEqpInfoModal(false)}>×</button>
+            </div>
+            <div className="modal-body">
+              <div className="os-info-block">
+                <div className="os-info-block-title">Cliente</div>
+                <div className="os-info-grid">
+                  <div className="os-info-row"><span>Nome</span><strong>{selectedCliente?.nome || '—'}</strong></div>
+                  <div className="os-info-row"><span>Telefone</span><strong>{selectedCliente?.telefone || '—'}</strong></div>
+                  <div className="os-info-row"><span>Endereço</span><strong>{selectedCliente?.endereco || '—'}</strong></div>
+                </div>
+              </div>
+
+              <div className="os-info-block" style={{ marginTop: 14 }}>
+                <div className="os-info-block-title">Equipamento</div>
+                <div className="os-info-grid">
+                  <div className="os-info-row"><span>Modelo</span><strong>{selectedEquipamento?.modelo || '—'}</strong></div>
+                  <div className="os-info-row"><span>Marca</span><strong>{selectedEquipamento?.marca || '—'}</strong></div>
+                  <div className="os-info-row"><span>Nº Série</span><strong>{selectedEquipamento?.numero_serie || '—'}</strong></div>
+                  <div className="os-info-row"><span>Voltagem</span><strong>{selectedEquipamento?.voltagem || '—'}</strong></div>
+                </div>
+              </div>
+            </div>
+            <div className="modal-footer">
+              <button className="btn btn-secondary" onClick={() => setShowCliEqpInfoModal(false)}>Fechar</button>
             </div>
           </div>
         </div>

@@ -25,6 +25,22 @@
   text-overflow: ellipsis;
 }
 
+.dash-topline {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.dash-version {
+  flex-shrink: 0;
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--gray);
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
 .dash-welcome h2 {
   font-size: 24px;
   font-weight: 700;
